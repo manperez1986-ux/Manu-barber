@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Manu Barber Pro - v53</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ManuBarber">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1465/1465133.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --ios-bg: #f2f2f7; --ios-card: #ffffff; --ios-text: #000000;
+            --blue: #007aff; --green: #34c759; --red: #ff3b30; --gold: #af9500;
+            --gray: #8e8e93; --light-gray: #e5e5ea;
+        }
+
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden; 
+            overscroll-behavior-y: none;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--ios-bg); color: var(--ios-text);
+        }
+
+        .main-wrapper {
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 500px; margin: auto; padding-bottom: 40px; }
+        header { text-align: center; padding: 10px 0; }
+        .panel-rates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .rate-card { background: var(--ios-card); padding: 12px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+        .rate-card input { border: none; font-weight: 800; font-size: 1.1em; width: 60%; text-align: center; outline: none; background: transparent; }
+        .btn-sync { background: var(--blue); border: none; border-radius: 50%; width: 24px; height: 24px; color: white; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+
+        .dashboard { background: var(--ios-card); border-radius: 22px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); margin-bottom: 15px; }
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-bottom: 1px solid #f2f2f7; padding-bottom: 12px; margin-bottom: 12px; }
+        .net-profit { text-align: center; background: #fffcf0; padding: 15px; border-radius: 15px; border: 1px solid #ffecb3; }
+        
+        .tabs { display: flex; background: #e5e5ea; padding: 3px; border-radius: 12px; margin-bottom: 15px; }
+        .tab { flex: 1; padding: 10px; border-radius: 10px; text-align: center; font-size: 0.75em; font-weight: 700; cursor: pointer; color: #48484a; }
+        .tab.active { background: white; box-shadow: 0 3px 8px rgba(0,0,0,0.1); color: var(--blue); }
+
+        .form-box { display: none; flex-direction: column; gap: 10px; }
+        .form-box.active { display: flex; }
+        .input-group { background: var(--ios-card); border-radius: 14px; border: 1px solid #d1d1d6; padding: 12px; display: flex; align-items: center; gap: 10px; }
+        input, select { border: none; width: 100%; font-size: 16px; outline: none; background: transparent; }
+        
+        .btn-main { background: var(--blue); color: white; border: none; padding: 16px; border-radius: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-fast { background: var(--green); color: white; border: none; padding: 16px; border-radius: 16px; font-weight: 700; cursor: pointer; }
+
+        .filter-container { background: #e3e3e8; border-radius: 16px; padding: 5px; display: flex; gap: 5px; margin: 15px 0; }
+        .filter-btn { flex: 1; border: none; padding: 10px 0; border-radius: 12px; font-size: 0.8em; font-weight: 700; cursor: pointer; color: #636366; background: transparent; }
+        .filter-btn.active { background: white; color: var(--ios-text); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .card-item { background: var(--ios-card); padding: 15px; border-radius: 18px; margin-bottom: 10px; position: relative; border-left: 5px solid var(--gray); animation: slideIn 0.3s ease; }
+        .pending { border-left-color: var(--red); }
+        .paid { border-left-color: var(--green); }
+        .expense { border-left-color: #5856d6; }
+        
+        .btn-del-abs { position: absolute; right: 15px; top: 15px; border: none; background: none; color: #d1d1d6; cursor: pointer; }
+        .btn-group-row { display: flex; gap: 6px; margin-top: 10px; }
+        .btn-act { flex: 1; border: none; padding: 10px; border-radius: 10px; font-size: 0.75em; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .btn-abo { background: #eef7ed; color: var(--green); border: 1px solid #c3e6cb; }
+        .btn-liq { background: var(--green); color: white; }
+        .btn-wsp-card { background: #e7f9ee; color: #25d366; text-decoration: none; border: 1px solid #c3e6cb; margin-top: 8px; font-size: 0.75em; font-weight: 700; padding: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+        .corte-card { background: var(--ios-card); border-radius: 18px; padding: 15px; margin-top: 15px; border: 1px solid #e5e5ea; }
+        .resumen-totales-hist { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin: 10px 0; text-align: center; background: #f9f9fb; padding: 10px; border-radius: 12px; }
+        .resumen-totales-hist div small { font-size: 0.55em; color: var(--gray); font-weight: 800; text-transform: uppercase; display: block; }
+        .resumen-totales-hist div b { font-size: 0.8em; }
+        .resumen-lista { font-size: 0.75em; color: #444; background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #eee; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 8px 0; border-bottom: 1px solid #f2f2f7; }
+        .h-paid { color: var(--blue); font-weight: 700; }
+        .h-debt { color: var(--red); font-weight: 700; }
+
+        #ios-alert { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 18px; border-radius: 22px; box-shadow: 0 12px 30px rgba(0,0,0,0.15); z-index: 9999; width: 300px; text-align: center; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="ios-alert">
+    <p id="alert-msg" style="font-weight:700;"></p>
+    <div id="alert-input-container" style="display:none; margin-bottom:15px;">
+        <div class="input-group">
+            <input type="number" id="alert-val" placeholder="Monto">
+            <select id="alert-cur" style="width:80px;"><option value="VES">Bs</option><option value="EUR">€</option><option value="USD">$</option></select>
+        </div>
+    </div>
+    <div style="display: flex; gap: 20px; justify-content: center;">
+        <button onclick="closeAlert()" style="border:none; background:none; color:var(--blue); font-size:16px;">Cancelar</button>
+        <button id="confirm-action" style="border:none; background:none; color:var(--red); font-weight:700; font-size:16px;">Confirmar</button>
+    </div>
+</div>
+
+<div class="main-wrapper">
+    <div class="container">
+        <header><h2>Manu Barber Pro 💈</h2></header>
+
+        <div class="panel-rates">
+            <div class="rate-card">
+                <small style="font-size:0.6em; color:var(--gray); font-weight:800;">BCV EUR</small><br>
+                <input type="number" id="t-eur" value="43.20" onchange="updateAll()">
+                <button class="btn-sync" onclick="syncRate('EUR')"><i data-lucide="refresh-cw" size="14"></i></button>
+            </div>
+            <div class="rate-card">
+                <small style="font-size:0.6em; color:var(--gray); font-weight:800;">BCV USD</small><br>
+                <input type="number" id="t-usd" value="39.80" onchange="updateAll()">
+                <button class="btn-sync" onclick="syncRate('USD')"><i data-lucide="refresh-cw" size="14"></i></button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="dash-grid">
+                <div class="dash-item"><small style="color:var(--gray); font-weight:800; font-size:0.6em;">VENTAS HOY</small><br><strong id="total-cortes">0.00 Bs</strong></div>
+                <div class="dash-item"><small style="color:var(--gray); font-weight:800; font-size:0.6em;">GASTOS HOY</small><br><strong id="total-gastos" style="color:var(--red)">0.00 Bs</strong></div>
+            </div>
+            <div class="net-profit">
+                <small style="font-size:0.7em; font-weight:800; color:var(--gold);">EFECTIVO NETO (Bs)</small>
+                <h2 id="total-bs" style="margin:5px 0; color:var(--gold); font-weight:900;">0.00 Bs</h2>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="mainTab('cortes', this)">Cortes</div>
+            <div class="tab" onclick="mainTab('gastos', this)">Gastos</div>
+            <div class="tab" onclick="mainTab('reportes', this)">Historial</div>
+        </div>
+
+        <div id="sec-cortes" class="form-box active">
+            <div class="input-group"><i data-lucide="user" size="18" color="gray"></i><input type="text" id="c-nom" placeholder="Cliente"></div>
+            <div style="display: flex; gap: 8px;">
+                <div class="input-group" style="flex:2;"><i data-lucide="scissors" size="18" color="gray"></i><input type="number" id="c-mon" placeholder="Precio" oninput="calcPreview()"></div>
+                <select id="c-cur" style="flex:1; background:white; border:1px solid #d1d1d6; border-radius:14px;" onchange="calcPreview()">
+                    <option value="EUR" selected>EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="VES">VES (Bs)</option>
+                </select>
+            </div>
+            <div id="preview-bs" style="font-size:0.8em; color:var(--gold); font-weight:800; margin-left:10px;">➔ 0.00 Bs</div>
+            <div class="input-group" style="border-color: var(--gold); background: #fffdf5;">
+                <i data-lucide="plus-circle" size="18" color="#af9500"></i>
+                <input type="number" id="c-abo" placeholder="Abono">
+                <select id="c-abo-cur" style="width:80px;"><option value="VES">Bs</option><option value="EUR">€</option><option value="USD">$</option></select>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-main" onclick="addC(false)" style="flex:2;"><i data-lucide="plus"></i> Registrar</button>
+                <button class="btn-fast" onclick="addC(true)" style="flex:1;"><i data-lucide="zap"></i> Todo</button>
+            </div>
+            <div class="filter-container">
+                <button class="filter-btn active" id="f-pend" onclick="setFilter('pend')">PENDIENTES</button>
+                <button class="filter-btn" id="f-paga" onclick="setFilter('paga')">PAGADOS HOY</button>
+            </div>
+            <div id="list-c"></div>
+        </div>
+
+        <div id="sec-gastos" class="form-box">
+            <div class="input-group"><i data-lucide="shopping-cart" size="18" color="gray"></i><input type="text" id="g-des" placeholder="Descripción"></div>
+            <div style="display: flex; gap: 8px;">
+                <div class="input-group" style="flex:2;"><i data-lucide="banknote" size="18" color="gray"></i><input type="number" id="g-mon" placeholder="Monto"></div>
+                <select id="g-cur" style="flex:1; background:white; border:1px solid #d1d1d6; border-radius:14px;">
+                    <option value="VES" selected>Bs</option><option value="EUR">€</option><option value="USD">$</option>
+                </select>
+            </div>
+            <button class="btn-main" style="background: #5856d6;" onclick="addG()"><i data-lucide="save"></i> Guardar Gasto</button>
+            <div id="list-g"></div>
+        </div>
+
+        <div id="sec-reportes" class="form-box">
+            <button class="btn-main" style="background:var(--gold);" onclick="realizarCorte()">
+                <i data-lucide="scissors"></i> CERRAR CAJA Y REPORTE
+            </button>
+            <button class="btn-main" style="background:var(--gray); margin-top:8px; font-size:0.8em;" onclick="deshacerCorte()">
+                <i data-lucide="rotate-ccw"></i> RECUPERAR / DESHACER CIERRE
+            </button>
+            <div id="historial-cierres"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+    lucide.createIcons();
+    let cortes = JSON.parse(localStorage.getItem('m_v53_c')) || [];
+    let gastos = JSON.parse(localStorage.getItem('m_v53_g')) || [];
+    let cierres = JSON.parse(localStorage.getItem('m_v53_h')) || [];
+    let currentFilter = 'pend';
+
+    const getS = (m) => m === 'USD' ? '$' : (m === 'EUR' ? '€' : 'Bs');
+
+    function mainTab(s, el) {
+        document.querySelectorAll('.form-box').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('sec-'+s).classList.add('active');
+        el.classList.add('active'); lucide.createIcons();
+    }
+
+    function setFilter(f) {
+        currentFilter = f;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('f-'+f).classList.add('active');
+        updateAll();
+    }
+
+    async function syncRate(coin) {
+        try {
+            const res = await fetch('https://open.er-api.com/v6/latest/USD');
+            const data = await res.json();
+            if(coin === 'EUR') document.getElementById('t-eur').value = (data.rates.VES / data.rates.EUR).toFixed(2);
+            else document.getElementById('t-usd').value = data.rates.VES.toFixed(2);
+            updateAll();
+        } catch(e) { alert("Error de red"); }
+    }
+
+    function calcPreview() {
+        const val = parseFloat(document.getElementById('c-mon').value) || 0;
+        const cur = document.getElementById('c-cur').value;
+        const rate = parseFloat(document.getElementById(cur === 'EUR' ? 't-eur' : 't-usd').value) || 1;
+        document.getElementById('preview-bs').innerText = `➔ ${(cur==='VES'?val:val*rate).toFixed(2)} Bs`;
+    }
+
+    function addC(isFull) {
+        const n = document.getElementById('c-nom').value, m = parseFloat(document.getElementById('c-mon').value), cur = document.getElementById('c-cur').value;
+        const t_u = parseFloat(document.getElementById('t-usd').value), t_e = parseFloat(document.getElementById('t-eur').value);
+        if(!n || isNaN(m)) return;
+        let mUSD = (cur === 'EUR') ? m * (t_e/t_u) : (cur === 'VES' ? m/t_u : m);
+        let pagos = [];
+        if(isFull) pagos.push({v: m, c: cur, t_u, t_e, esCierre: false});
+        else {
+            const av = parseFloat(document.getElementById('c-abo').value), ac = document.getElementById('c-abo-cur').value;
+            if(av > 0) pagos.push({v: av, c: ac, t_u, t_e, esCierre: false});
+        }
+        cortes.unshift({ id: Date.now(), n, m, cur, mUSD, pagos });
+        save();
+        document.getElementById('c-nom').value=''; document.getElementById('c-mon').value=''; document.getElementById('c-abo').value='';
+    }
+
+    function addG() {
+        const d = document.getElementById('g-des').value, m = parseFloat(document.getElementById('g-mon').value), cur = document.getElementById('g-cur').value;
+        const t_u = parseFloat(document.getElementById('t-usd').value), t_e = parseFloat(document.getElementById('t-eur').value);
+        if(!d || isNaN(m)) return;
+        gastos.unshift({ id: Date.now(), d, m, cur, t_u, t_e });
+        save();
+        document.getElementById('g-des').value=''; document.getElementById('g-mon').value='';
+    }
+
+    function realizarCorte() {
+        if(cortes.length === 0 && gastos.length === 0) return;
+        showAlert("¿Cerrar caja ahora?", () => {
+            let sBs = 0, gBs = 0, rows = "";
+            let excelData = [];
+            let wspMsg = `💈 *REPORTE MANU BARBER*\n📅 ${new Date().toLocaleString()}\n\n*📌 MOVIMIENTOS:*\n`;
+            const t_u_c = parseFloat(document.getElementById('t-usd').value);
+            let backup = { c: JSON.parse(JSON.stringify(cortes)), g: JSON.parse(JSON.stringify(gastos)) };
+
+            cortes.forEach(c => {
+                let pUSD = 0, pBsCierre = 0;
+                c.pagos.forEach(p => {
+                    pUSD += (p.c==='VES'?p.v/p.t_u:(p.c==='EUR'?p.v*(p.t_e/p.t_u):p.v));
+                    if(!p.esCierre) {
+                        let eq = (p.c==='VES'?p.v:(p.c==='USD'?p.v*p.t_u:p.v*p.t_e));
+                        pBsCierre += eq; p.esCierre = true;
+                    }
+                });
+                if(pBsCierre > 0) {
+                    rows += `<tr><td>${c.n}</td><td class="h-paid">+${pBsCierre.toFixed(2)} Bs</td></tr>`;
+                    wspMsg += `🔵 ${c.n.padEnd(12)} | +${pBsCierre.toFixed(2)} Bs\n`;
+                    sBs += pBsCierre;
+                    excelData.push({ Detalle: c.n, Tipo: 'Pago Recibido', Monto_Bs: pBsCierre.toFixed(2) });
+                }
+                let dUSD = c.mUSD - pUSD;
+                if(dUSD > 0.05) {
+                    let dBs = dUSD * t_u_c;
+                    rows += `<tr style="background:#fffafa"><td>${c.n} (DEUDOR)</td><td class="h-debt">-${dBs.toFixed(2)} Bs</td></tr>`;
+                    wspMsg += `🔴 ${c.n.padEnd(12)} | -${dBs.toFixed(2)} Bs (DEBE)\n`;
+                    excelData.push({ Detalle: c.n, Tipo: 'Deuda Pendiente', Monto_Bs: (-dBs).toFixed(2) });
+                }
+            });
+
+            gastos.forEach(g => {
+                let eq = (g.cur==='VES'?g.m:(g.cur==='USD'?g.m*g.t_u:g.m*g.t_e));
+                rows += `<tr><td>Gasto: ${g.d}</td><td class="h-debt">-${eq.toFixed(2)} Bs</td></tr>`;
+                wspMsg += `➖ ${g.d.padEnd(12)} | -${eq.toFixed(2)} Bs\n`;
+                gBs += eq;
+                excelData.push({ Detalle: g.d, Tipo: 'Gasto', Monto_Bs: (-eq).toFixed(2) });
+            });
+
+            wspMsg += `\n*📊 RESUMEN FINAL:*\n💰 Servicios: ${sBs.toFixed(2)} Bs\n💸 Gastos: ${gBs.toFixed(2)} Bs\n✅ *NETO: ${(sBs-gBs).toFixed(2)} Bs*`;
+            excelData.push({ Detalle: '---', Tipo: 'NETO TOTAL', Monto_Bs: (sBs - gBs).toFixed(2) });
+
+            cierres.unshift({ id: Date.now(), fecha: new Date().toLocaleString(), sBs, gBs, total: (sBs-gBs), html: rows, backup: backup, excelData: excelData, wspMsg: wspMsg });
+            
+            cortes = cortes.filter(c => {
+                let pUSD_total = 0;
+                c.pagos.forEach(p => pUSD_total += (p.c==='VES'?p.v/p.t_u:(p.c==='EUR'?p.v*(p.t_e/p.t_u):p.v)));
+                return (c.mUSD - pUSD_total) > 0.05;
+            });
+            gastos = []; 
+
+            save();
+            localStorage.setItem('m_v53_h', JSON.stringify(cierres));
+        });
+    }
+
+    function deshacerCorte() {
+        if(cierres.length === 0) return;
+        showAlert("¿Recuperar último estado?", () => {
+            const last = cierres[0].backup;
+            if(last) { cortes = last.c; gastos = last.g; cierres.shift(); save(); localStorage.setItem('m_v53_h', JSON.stringify(cierres)); }
+        });
+    }
+
+    function sendWspRep(id) {
+        const ci = cierres.find(x => x.id === id);
+        // CORRECCIÓN: Usamos whatsapp://send para que elijas a quién mandárselo
+        window.open(`whatsapp://send?text=${encodeURIComponent(ci.wspMsg)}`, '_blank');
+    }
+
+    function exportExcel(id) {
+        const ci = cierres.find(x => x.id === id);
+        const ws = XLSX.utils.json_to_sheet(ci.excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Detalle Cierre");
+        XLSX.writeFile(wb, `ManuBarber_${id}.xlsx`);
+    }
+
+    function exportPDF(id) {
+        const el = document.getElementById(`rep-${id}`);
+        html2pdf().from(el).set({margin:10, filename:`Reporte_${id}.pdf`, html2canvas:{scale:2}}).save();
+    }
+
+    function save() {
+        localStorage.setItem('m_v53_c', JSON.stringify(cortes));
+        localStorage.setItem('m_v53_g', JSON.stringify(gastos));
+        updateAll();
+    }
+
+    function updateAll() {
+        let tIn = 0, tOut = 0;
+        const cL = document.getElementById('list-c'); cL.innerHTML = '';
+        const gL = document.getElementById('list-g'); gL.innerHTML = '';
+        const hL = document.getElementById('historial-cierres'); hL.innerHTML = '';
+        const t_u = parseFloat(document.getElementById('t-usd').value);
+
+        cortes.forEach(c => {
+            let pUSD = 0, pBs = 0;
+            c.pagos.forEach(p => {
+                pUSD += (p.c==='VES'?p.v/p.t_u:(p.c==='EUR'?p.v*(p.t_e/p.t_u):p.v));
+                let eq = (p.c==='VES'?p.v:(p.c==='USD'?p.v*p.t_u:p.v*p.t_e));
+                pBs += eq;
+                if(!p.esCierre) tIn += eq;
+            });
+            const dUSD = c.mUSD - pUSD, isD = dUSD > 0.05, dBs = (dUSD * t_u).toFixed(2);
+            if((currentFilter==='pend' && isD) || (currentFilter==='paga' && !isD)) {
+                cL.innerHTML += `<div class="card-item ${isD?'pending':'paid'}">
+                    <button class="btn-del-abs" onclick="confirmDel('c',${c.id})"><i data-lucide="trash-2" size="14"></i></button>
+                    <strong>${c.n}</strong>: ${c.m}${getS(c.cur)}
+                    <div style="font-size:0.75em; margin-top:4px;">Pagado: <span class="h-paid">${pBs.toFixed(2)} Bs</span></div>
+                    ${isD ? `<div style="font-size:0.75em; color:var(--red); font-weight:800; margin-top:5px;">DEBE: ${dBs} Bs</div>
+                        <div class="btn-group-row">
+                            <button class="btn-act btn-abo" onclick="addPayment(${c.id})"><i data-lucide="plus"></i> Abono</button>
+                            <button class="btn-act btn-liq" onclick="fastLiquidate(${c.id})"><i data-lucide="zap"></i> Liquidar</button>
+                        </div>
+                        <a class="btn-wsp-card" href="whatsapp://send?text=${encodeURIComponent('Hola '+c.n+', tu deuda es de '+dBs+' Bs.')}" target="_blank"><i data-lucide="message-circle"></i> Cobrar</a>` : '<div style="color:var(--green); font-weight:800; font-size:0.7em; margin-top:5px;">✓ SOLVENTE</div>'}
+                </div>`;
+            }
+        });
+
+        gastos.forEach(g => {
+            let eq = (g.cur==='VES'?g.m:(g.cur==='USD'?g.m*g.t_u:g.m*g.t_e));
+            tOut += eq;
+            gL.innerHTML += `<div class="card-item expense">
+                <button class="btn-del-abs" onclick="confirmDel('g',${g.id})"><i data-lucide="trash-2" size="14"></i></button>
+                <strong>${g.d}</strong>: ${g.m}${getS(g.cur)} ➔ <span style="font-weight:800;">${eq.toFixed(2)} Bs</span>
+            </div>`;
+        });
+
+        cierres.forEach(cie => {
+            hL.innerHTML += `<div class="corte-card" id="rep-${cie.id}">
+                <div style="font-weight:800; font-size:0.7em; border-bottom:1px solid #eee; padding-bottom:5px;">📅 ${cie.fecha}</div>
+                <div class="resumen-totales-hist">
+                    <div><small>Servicios</small><b class="h-paid">${cie.sBs.toFixed(2)}</b></div>
+                    <div><small>Gastos</small><b class="h-debt">-${cie.gBs.toFixed(2)}</b></div>
+                    <div><small>Neto</small><b style="color:var(--gold)">${cie.total.toFixed(2)}</b></div>
+                </div>
+                <div class="resumen-lista"><table>${cie.html}</table></div>
+                <div class="btn-group-row">
+                    <button class="btn-act" style="background:#25d366; color:white;" onclick="sendWspRep(${cie.id})"><i data-lucide="message-circle"></i> Wsp</button>
+                    <button class="btn-act" style="background:#1d6f42; color:white;" onclick="exportExcel(${cie.id})"><i data-lucide="file-spreadsheet"></i> Excel</button>
+                    <button class="btn-act" style="background:#c43e3e; color:white;" onclick="exportPDF(${cie.id})"><i data-lucide="file-text"></i> PDF</button>
+                </div>
+            </div>`;
+        });
+
+        document.getElementById('total-cortes').innerText = `${tIn.toFixed(2)} Bs`;
+        document.getElementById('total-gastos').innerText = `${tOut.toFixed(2)} Bs`;
+        document.getElementById('total-bs').innerText = `${(tIn - tOut).toFixed(2)} Bs`;
+        lucide.createIcons();
+    }
+
+    function addPayment(id) {
+        const c = cortes.find(x => x.id === id);
+        showAlert(`Abono para ${c.n}:`, (v, cur) => {
+            if(!isNaN(v) && v > 0) {
+                c.pagos.push({v: parseFloat(v), c: cur, t_u: parseFloat(document.getElementById('t-usd').value), t_e: parseFloat(document.getElementById('t-eur').value), esCierre: false});
+                save();
+            }
+        }, true);
+    }
+
+    function fastLiquidate(id) {
+        const c = cortes.find(x => x.id === id), t_u = parseFloat(document.getElementById('t-usd').value), t_e = parseFloat(document.getElementById('t-eur').value);
+        let pUSD = 0; c.pagos.forEach(p => pUSD += (p.c==='VES'?p.v/p.t_u:(p.c==='EUR'?p.v*(p.t_e/p.t_u):p.v)));
+        let fUSD = c.mUSD - pUSD;
+        if(fUSD > 0.01) {
+            let val = (c.cur==='EUR') ? fUSD/(t_e/t_u) : (c.cur==='VES' ? fUSD*t_u : fUSD);
+            c.pagos.push({v: parseFloat(val.toFixed(2)), c: (c.cur==='VES'?'VES':c.cur), t_u, t_e, esCierre: false});
+            save();
+        }
+    }
+
+    function confirmDel(t, id) { 
+        showAlert("¿Eliminar registro?", () => { if(t==='c') cortes=cortes.filter(x=>x.id!==id); else gastos=gastos.filter(x=>x.id!==id); save(); });
+    }
+
+    function showAlert(msg, onConfirm, showInput = false) {
+        document.getElementById('alert-msg').innerText = msg;
+        document.getElementById('alert-input-container').style.display = showInput ? 'block' : 'none';
+        document.getElementById('ios-alert').style.display = 'block';
+        document.getElementById('confirm-action').onclick = () => { onConfirm(document.getElementById('alert-val').value, document.getElementById('alert-cur').value); closeAlert(); };
+    }
+    function closeAlert() { document.getElementById('ios-alert').style.display = 'none'; }
+
+    updateAll();
+</script>
+</body>
+</html>
